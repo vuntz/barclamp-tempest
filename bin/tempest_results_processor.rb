@@ -80,7 +80,6 @@ class TempestResultsProcessor
         end
         puts result
       end
-
     end
   end
 end
