@@ -22,7 +22,7 @@ class TempestResultsProcessor
  SKIPPED = 3
  
  def  run(args, options={"ForceArray" => false})
-    no_compare = true if args[1].nil?
+    no_compare = true if args.size==1
     currXml = args[0]
     prevXml = args[1] unless no_compare
     currHash = XmlSimple.xml_in(currXml, options)
