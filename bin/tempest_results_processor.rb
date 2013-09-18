@@ -78,7 +78,7 @@ class TempestResultsProcessor
         if !no_compare && res1 != res2
           result += ",*"
         end
-        print "#{result}\n"
+        puts result
       end
 
     end
