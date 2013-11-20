@@ -120,15 +120,19 @@ users.each do |user|
     action :add_access
   end.run_action(:add_access)
 
-  keystone_register "add default ec2 creds for #{user["name"]}:#{tempest_comp_tenant}" do
-    host keystone_address
-    port keystone_admin_port
-    token keystone_token
-    user_name user["name"]
-    tenant_name tenant_name tempest_comp_tenant
-    action :add_ec2
-  end.run_action(:add_ec2)
-
+  keystone_register "add default tempest_ec2 creds for #{user["name"]}:#{user["role"]} in tenant #{tempest_comp_tenant}" do
+     protocol node[:keystone][:api][:protocol]
+     host keystone_address
+     auth ({
+         :tenant => comp_admin_tenant,
+         :user => comp_admin_user,
+         :password => comp_admin_pass
+     })
+     port keystone_admin_port
+     user_name user["name"]
+     tenant_name tempest_comp_tenant
+     action :add_ec2
+   end.run_action(:add_ec2)
 
 end
 
@@ -148,7 +152,8 @@ end
 machine_id_file = node[:tempest][:tempest_path] + '/machine.id'
 
 venv_prefix_path = node[:tempest][:use_virtualenv] ? ". /opt/tempest/.venv/bin/activate && " : nil
-bin_path = node[:tempest][:use_virtualenv] ? "/opt/tempest/.venv/bin" : "/usr/bin/"
+ENV['PATH'] = ENV['PATH'] + ":/opt/tempest/.venv/bin" if node[:tempest][:use_virtualenv]
+
 
 bash "upload tempest test image" do
   code <<-EOH
@@ -225,6 +230,8 @@ ec2_secret = `keystone --os_username #{tempest_comp_user} --os_password #{tempes
 cirros_version = "0.3.0"
 
 cli_dir = nova[:nova][:use_gitrepo] ? '/usr/local/bin' : '/usr/bin'
+ext_net_id = `neutron --os_username #{tempest_adm_user} --os_password #{tempest_adm_pass} --os_tenant_name #{tempest_comp_tenant} --os_auth_url http://#{keystone_address}:5000/v2.0 net-list | grep floating | awk {'print $2'}`.strip
+ext_rtr_id = `neutron --os_username #{tempest_adm_user} --os_password #{tempest_adm_pass} --os_tenant_name #{tempest_comp_tenant} --os_auth_url http://#{keystone_address}:5000/v2.0 router-list | grep floating | awk {'print $2'}`.strip
 template "#{node[:tempest][:tempest_path]}/etc/tempest.conf" do
   source "tempest.conf.erb"
   mode 0644
@@ -253,12 +260,18 @@ template "#{node[:tempest][:tempest_path]}/etc/tempest.conf" do
     :ec2_secret => ec2_secret,
     :tempest_path => node[:tempest][:tempest_path],
     :nova_host => nova.name,
-    :cirros_version => cirros_version
+    :cirros_version => cirros_version,
+    :ext_net_id => ext_net_id,
+    :ext_rtr_id => ext_rtr_id
   )
 end
 
-nosetests = "/opt/tempest/.venv/bin/nosetests"
+nosetests = `PATH=#{ENV['PATH']} && which nosetests`.strip
 
+if node[:tempest][:use_virtualenv]
+  nosetests = "/opt/tempest/.venv/bin/python #{nosetests}"
+end
+  
 template "/tmp/tempest_smoketest.sh" do
   mode 0755
   source "tempest_smoketest.sh.erb"

@@ -16,10 +16,7 @@ admin_password=<%= @comp_admin_pass %>
 admin_tenant_name=<%= @comp_admin_tenant %>
 
 #s3 test preparation
-cert_dir=<%= @tempest_path %>/etc/certs/
-
-#s3 test preparation
-cert_dir=<%= @tempest_path %>/etc/certs/
+cert_dir=<%= @tempest_path %>/etc/certs
 mkdir -p ${cert_dir}
 
 export OS_USERNAME=${username}
@@ -30,18 +27,26 @@ export EUCALYPTUS_CERT="${cert_dir}/cacert.pem"
 export EC2_CERT="${cert_dir}/cert.pem"
 export EC2_PRIVATE_KEY="${cert_dir}/pk.pem"
 
+admin_user_id=$(keystone --os-username ${admin_username} --os-password ${admin_password} --os-tenant-name ${admin_tenant_name} user-list | grep "${admin_username}" | awk {'print $2'})
+admin_role_id=$(keystone --os-username ${admin_username} --os-password ${admin_password} --os-tenant-name ${admin_tenant_name} role-list | grep "${admin_username}" | awk {'print $2'})
+tempest_tenant_id=$(keystone --os-username ${admin_username} --os-password ${admin_password} --os-tenant-name ${admin_tenant_name} tenant-list | grep "${tenant_name}" | awk {'print $2'})
+
 (
-nova x509-get-root-cert "${EUCALYPTUS_CERT}"
-nova x509-create-cert "${EC2_PRIVATE_KEY}" "${EC2_CERT}"
-s3_materials_path=<%= @tempest_path %>/etc/cirros/
-euca-bundle-image -i ${s3_materials_path}/cirros-*-blank.img -d ${s3_materials_path}
-euca-bundle-image -i ${s3_materials_path}/cirros-*-initrd --ramdisk true -d ${s3_materials_path}
-euca-bundle-image -i ${s3_materials_path}/cirros-*-vmlinuz --kernel true -d ${s3_materials_path}
+if [[ "$(keystone --os-username ${admin_username} --os-password ${admin_password} --os-tenant-name ${admin_tenant_name} user-role-list --user-id ${admin_user_id} --tenant-id ${tempest_tenant_id} | grep "${admin_username}" | awk {'print $2'})" == "${admin_role_id}" ]]; then
+    echo -e "User ${admin_user_id} is authorized in ${tempest_tenant_id}"
+else
+    echo -e "Authorizing user ${admin_user_id} in ${tempest_tenant_id} with role ${admin_role_id}"
+    keystone --os-username ${admin_username} --os-password ${admin_password} --os-tenant-name ${admin_tenant_name} user-role-add --user-id ${admin_user_id} --tenant-id ${tempest_tenant_id} --role-id ${admin_role_id} || exit 1
+fi
 
-<%= @nosetests %> -q --with-xunit --xunit-file=/dev/stdout -w /opt/tempest/ -v tempest
-tresult=$?
 
-s3_materials_path=<%= @tempest_path %>/etc/cirros/
+if [ ! -f ${EUCALYPTUS_CERT} ]; then
+    nova x509-get-root-cert "${EUCALYPTUS_CERT}"
+    nova x509-create-cert "${EC2_PRIVATE_KEY}" "${EC2_CERT}"
+else
+   echo -e "EC2 auth data found, reusing it..."
+fi
+s3_materials_path=<%= @tempest_path %>/etc/cirros
 euca-bundle-image -i ${s3_materials_path}/cirros-*-blank.img -d ${s3_materials_path}
 euca-bundle-image -i ${s3_materials_path}/cirros-*-initrd --ramdisk true -d ${s3_materials_path}
 euca-bundle-image -i ${s3_materials_path}/cirros-*-vmlinuz --kernel true -d ${s3_materials_path}
@@ -55,8 +60,8 @@ tresult=$?
 export OS_USERNAME=${admin_username}
 export OS_PASSWORD=${admin_password}
 export OS_TENANT_NAME=${admin_tenant_name}
-echo -e "Cleaning up tenants..."
-for f in `keystone tenant-list | grep -E 'test_tenant_|tenant2-[0-9]*|tenant-new[0-9]*|tenant-[0-9]+|tenant-dup-[0-9]+' | awk '{print $2}'` ; do keystone tenant-delete $f ; done
+echo -e "Cleaning up tenants, excluding tempest-service tenant ${tempest_tenant_id}"
+for f in `keystone tenant-list | grep -E 'test_tenant_|tenant2-[0-9]*|tenant-new[0-9]*|tenant-[0-9]+|tenant-dup-[0-9]+' | grep -v "{$tempest_tenant_id}"  | awk '{print $2}'` ; do keystone tenant-delete $f ; done
 echo -e "Cleaning up users..."
 for f in `keystone user-list | grep -E 'test_user_[0-9]+' | awk '{print $2}'` ; do keystone user-delete $f ; done
 echo -e "Cleaning up roles..."

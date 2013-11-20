@@ -128,12 +128,9 @@ debs:
       - python-testrepository
       - python-oslo.config
       - libxslt1-dev
-<<<<<<< HEAD
       - euca2ools
       - git
-=======
 
->>>>>>> 5c3050a... keep tempest operational in case of non-pfs
 rpms:
   centos-6.4:
     repos:
@@ -165,7 +162,7 @@ rpms:
 pips:
   - pbr>=0.5.21,<1.0
   - anyjson>=0.3.3
-  - nose
+  - nose==1.1.2
   - httplib2
   - jsonschema>=1.3.0,!=1.4.0
   - testtools>=0.9.32
@@ -180,7 +177,7 @@ pips:
   - python-cinderclient>=1.0.4
   - python-heatclient>=0.2.3
   - testresources>=0.2.4
-  - keyring>=1.6.1
+  - keyring>=1.6.1,<2.0
   - testrepository>=0.0.17
   - oslo.config>=1.2.0
   - eventlet>=0.13.0
