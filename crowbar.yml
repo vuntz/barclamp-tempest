@@ -128,8 +128,12 @@ debs:
       - python-testrepository
       - python-oslo.config
       - libxslt1-dev
+<<<<<<< HEAD
       - euca2ools
       - git
+=======
+
+>>>>>>> 5c3050a... keep tempest operational in case of non-pfs
 rpms:
   centos-6.4:
     repos:

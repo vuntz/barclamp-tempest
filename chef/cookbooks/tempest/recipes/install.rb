@@ -87,6 +87,7 @@ bash "install_tempest_from_archive" do
   not_if { ::File.exists?(tempest_path) }
 end
 
+package("libxslt1-dev")
 
 if node[:tempest][:use_virtualenv]
   package("python-virtualenv")
@@ -103,7 +104,7 @@ if node[:tempest][:use_virtualenv]
     mode  0775
     action :create
   end
-  execute "virtualenv /opt/tempest/.venv --system-site-packages" unless File.exist?("/opt/tempest/.venv")
+  execute "virtualenv /opt/tempest/.venv" unless File.exist?("/opt/tempest/.venv")
   pip_cmd = ". /opt/tempest/.venv/bin/activate && #{pip_cmd}"
   nosetests = "/opt/tempest/.venv/bin/python #{nosetests}"
 end

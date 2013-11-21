@@ -148,6 +148,7 @@ end
 machine_id_file = node[:tempest][:tempest_path] + '/machine.id'
 
 venv_prefix_path = node[:tempest][:use_virtualenv] ? ". /opt/tempest/.venv/bin/activate && " : nil
+bin_path = node[:tempest][:use_virtualenv] ? "/opt/tempest/.venv/bin" : "/usr/bin/"
 
 bash "upload tempest test image" do
   code <<-EOH
