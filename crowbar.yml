@@ -127,7 +127,9 @@ debs:
       - python-keyring
       - python-testrepository
       - python-oslo.config
-
+      - libxslt1-dev
+      - euca2ools
+      - git
 rpms:
   centos-6.4:
     repos:
