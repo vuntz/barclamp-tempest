@@ -55,9 +55,11 @@ class TempestService < ServiceObject
       @logger.info("Tempest create_proposal: no nova found")
     end
 
-    hash["tempest"]["tempest_user_username"] = "tempest-user-" + random_password
-    hash["tempest"]["tempest_user_tenant"] = "tempest-tenant-" + random_password
-    hash["tempest"]["tempest_user_password"] = random_password
+    base["attributes"]["tempest"]["tempest_user_username"] = "tempest-user-" + random_password
+    base["attributes"]["tempest"]["tempest_adm_username"] = "tempest-adm-" + random_password
+    base["attributes"]["tempest"]["tempest_user_tenant"] = "tempest-tenant-" + random_password
+    base["attributes"]["tempest"]["tempest_user_password"] = random_password
+    base["attributes"]["tempest"]["tempest_adm_password"] = random_password
 
     base.config_hash = hash
     @logger.debug("Tempest create_proposal: exiting")
@@ -186,8 +188,9 @@ class TempestService < ServiceObject
     proposal_path = proposal['attributes'][@bc_name]['tempest_path']
 
     @logger.info("starting tempest on node #{node}, test run uuid #{test_run['uuid']}")
+
     pid = fork do
-      command_line = "python #{proposal_path}/run_tempest.py -w #{proposal_path} tempest 2>/dev/null"
+      command_line = "/tmp/tempest_smoketest.sh 2>/dev/null"
       Process.waitpid run_remote_chef_client(node, command_line, test_run['results.xml'])
 
       test_run['ended'] = Time.now.utc.to_i

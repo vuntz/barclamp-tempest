@@ -57,6 +57,9 @@ tempest_comp_user = node[:tempest][:tempest_user_username]
 tempest_comp_pass = node[:tempest][:tempest_user_password]
 tempest_comp_tenant = node[:tempest][:tempest_user_tenant]
 
+tempest_adm_user = node[:tempest][:tempest_adm_username]
+tempest_adm_pass = node[:tempest][:tempest_adm_password]
+
 keystone_address = Chef::Recipe::Barclamp::Inventory.get_network_by_type(keystone, "admin").address if keystone_address.nil?
 keystone_token = keystone[:keystone][:service][:token]
 keystone_admin_port = keystone[:keystone][:api][:admin_port]
@@ -74,10 +77,8 @@ end
 glance_address = Chef::Recipe::Barclamp::Inventory.get_network_by_type(glance, "admin").address if glance_address.nil?
 glance_port = glance[:glance][:api][:bind_port]
 
-flavor_ref = "1"
-alt_flavor_ref = "2"
-# NOTE(aandreev): selected "2" while merging 
-#alt_flavor_ref = "1"
+flavor_ref = "6"
+alt_flavor_ref = "7"
 
 keystone_register "tempest tempest wakeup keystone" do
   host keystone_address
@@ -94,27 +95,36 @@ keystone_register "create tenant #{tempest_comp_tenant} for tempest" do
   action :add_tenant
 end
 
-keystone_register "add #{tempest_comp_user}:#{tempest_comp_tenant} user" do
-  host keystone_address
-  port keystone_admin_port
-  token keystone_token
-  user_name tempest_comp_user
-  user_password tempest_comp_pass
-  tenant_name tempest_comp_tenant 
-  action :add_user
+users = [
+          {'name' => tempest_comp_user, 'pass' => tempest_comp_pass, 'role' => 'Member'},
+          {'name' => tempest_adm_user, 'pass' => tempest_adm_pass, 'role' => 'admin' },
+        ]
+users.each do |user|
+  keystone_register "add #{user["name"]}:#{user["pass"]} user" do
+    host keystone_address
+    port keystone_admin_port
+    token keystone_token
+    user_name user["name"]
+    user_password user["pass"]
+    tenant_name tempest_comp_tenant 
+    action :add_user
+  end
+
+  keystone_register "add #{user["name"]}:#{tempest_comp_tenant} user #{user["role"]} role" do
+    host keystone_address
+    port keystone_admin_port
+    token keystone_token
+    user_name user["name"]
+    role_name user["role"]
+    tenant_name tempest_comp_tenant 
+    action :add_access
+  end
 end
 
-keystone_register "add #{tempest_comp_user}:#{tempest_comp_tenant} user admin role" do
-  host keystone_address
-  port keystone_admin_port
-  token keystone_token
-  user_name tempest_comp_user
-  role_name "admin"
-  tenant_name tempest_comp_tenant 
-  action :add_access
-end
 
 machine_id_file = node[:tempest][:tempest_path] + '/machine.id'
+
+venv_prefix_path = node[:tempest][:use_virtualenv] ? ". /opt/tempest/.venv/bin/activate && " : nil
 
 bash "upload tempest test image" do
   code <<-EOH
@@ -130,7 +140,7 @@ IMG_FILE=$(basename $IMAGE_URL)
 IMG_NAME="${IMG_FILE%-*}"
 
 function glance_it() {
-glance -I $OS_USER -T $OS_TENANT -K $OS_PASSWORD -N http://$KEYSTONE_HOST:5000/v2.0 -H $GLANCE_HOST $@
+#{venv_prefix_path} glance -I $OS_USER -T $OS_TENANT -K $OS_PASSWORD -N http://$KEYSTONE_HOST:5000/v2.0 -H $GLANCE_HOST $@
 }
 
 function extract_id() {
@@ -177,6 +187,17 @@ EOH
   not_if { File.exists?(machine_id_file) }
 end
 
+bash "create_yet_another_tiny_flavor" do
+  code <<-EOH
+  #{venv_prefix_path} nova --os_username #{tempest_adm_user} --os_password #{tempest_adm_pass} --os_tenant_name #{tempest_comp_tenant} --os_auth_url http://#{keystone_address}:5000/v2.0 flavor-create tempest-stuff #{alt_flavor_ref} 128 1 1 || exit 0
+  #{venv_prefix_path} nova --os_username #{tempest_adm_user} --os_password #{tempest_adm_pass} --os_tenant_name #{tempest_comp_tenant} --os_auth_url http://#{keystone_address}:5000/v2.0 flavor-create tempest-stuff-2 #{flavor_ref} 132 1 1 || exit 0
+EOH
+end
+
+directory "#{node[:tempest][:tempest_path]}/etc" do
+  action :create
+end
+
 template "#{node[:tempest][:tempest_path]}/etc/tempest.conf" do
   source "tempest.conf.erb"
   mode 0644
@@ -202,6 +223,38 @@ template "#{node[:tempest][:tempest_path]}/etc/tempest.conf" do
     :comp_admin_tenant => comp_admin_tenant 
   )
 end
+
+unless %w(redhat centos).include?(node.platform)
+  nosetests = `which nosetests`.strip
+else
+  #for centos we have to use nosetests from venv
+  nosetests = "/opt/tempest/.venv/bin/nosetests"
+end
+
+if node[:tempest][:use_virtualenv]
+  nosetests = "/opt/tempest/.venv/bin/python #{nosetests}"
+end
+
+
+template "/tmp/tempest_smoketest.sh" do
+  mode 0755
+  source "tempest_smoketest.sh.erb"
+  variables(
+    :nosetests => nosetests,
+    :key_host => keystone_address,
+    :key_port => keystone_port,
+    :comp_user => tempest_comp_user,
+    :comp_pass => tempest_comp_pass,
+    :comp_tenant => tempest_comp_tenant,
+    :alt_comp_user => alt_comp_user,
+    :alt_comp_pass => alt_comp_pass,
+    :alt_comp_tenant => alt_comp_tenant,
+    :comp_admin_user => comp_admin_user,
+    :comp_admin_pass => comp_admin_pass,
+    :comp_admin_tenant => comp_admin_tenant
+  )
+end
+
 
 cookbook_file "#{node[:tempest][:tempest_path]}/run_tempest.py" do
   source "run_tempest.py"
