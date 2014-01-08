@@ -40,7 +40,7 @@ smoketest:
   timeout: 2400
 
 crowbar:
-  layout: 1.9
+  layout: 2.0
   order: 99
   run_order: 99
   chef_order: 99
