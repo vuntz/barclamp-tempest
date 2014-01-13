@@ -18,7 +18,6 @@
 # limitations under the License.
 #
 
-
 env_filter = " AND nova_config_environment:nova-config-#{node[:tempest][:nova_instance]}"
 
 novas = search(:node, "roles:nova-multi-controller#{env_filter}") || []
@@ -198,6 +197,7 @@ directory "#{node[:tempest][:tempest_path]}/etc" do
   action :create
 end
 
+cli_dir = nova[:nova][:use_gitrepo] ? '/usr/local/bin' : '/usr/bin'
 template "#{node[:tempest][:tempest_path]}/etc/tempest.conf" do
   source "tempest.conf.erb"
   mode 0644
@@ -220,7 +220,8 @@ template "#{node[:tempest][:tempest_path]}/etc/tempest.conf" do
     :img_tenant => tempest_comp_tenant,
     :comp_admin_user => comp_admin_user,
     :comp_admin_pass => comp_admin_pass,
-    :comp_admin_tenant => comp_admin_tenant 
+    :comp_admin_tenant => comp_admin_tenant,
+    :cli_dir => cli_dir 
   )
 end
 
