@@ -129,6 +129,12 @@ debs:
       - python-oslo.config
 
 rpms:
+  centos-6.4:
+    repos:
+      - bare os-havana 50 http://repos.fedorapeople.org/repos/openstack/openstack-havana/epel-6
+  redhat-6.4:
+    repos:
+      - bare os-havana 50 http://repos.fedorapeople.org/repos/openstack/openstack-havana/epel-6
   pkgs:
     - python-anyjson
     - python-nose
