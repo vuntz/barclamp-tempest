@@ -73,7 +73,9 @@ remote_file tarball_url do
 end
 
 #needed to create venv correctly
+
 package("libxslt1-dev")
+
 #needed for tempest.tests.test_wrappers.TestWrappers.test_pretty_tox
 package("git")
 #needed for ec2 and s3 test suite
