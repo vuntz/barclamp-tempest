@@ -257,17 +257,7 @@ template "#{node[:tempest][:tempest_path]}/etc/tempest.conf" do
   )
 end
 
-unless %w(redhat centos).include?(node.platform)
-  nosetests = `which nosetests`.strip
-else
-  #for centos we have to use nosetests from venv
-  nosetests = "/opt/tempest/.venv/bin/nosetests"
-end
-
-if node[:tempest][:use_virtualenv]
-  nosetests = "/opt/tempest/.venv/bin/python #{nosetests}"
-end
-
+nosetests = "/opt/tempest/.venv/bin/nosetests"
 
 template "/tmp/tempest_smoketest.sh" do
   mode 0755
@@ -288,7 +278,6 @@ template "/tmp/tempest_smoketest.sh" do
     :tempest_path => node[:tempest][:tempest_path]
   )
 end
-
 
 cookbook_file "#{node[:tempest][:tempest_path]}/run_tempest.py" do
   source "run_tempest.py"

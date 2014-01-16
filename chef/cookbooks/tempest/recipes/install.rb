@@ -18,18 +18,6 @@
 # limitations under the License.
 #
 
-# From the pip-requires -- all the Ubuntu packages for tempest prereqs
-unless %w(redhat centos).include?(node.platform)
-  packages = %w(python-anyjson python-nose python-httplib2 python-testtools python-lxml
-     python-boto python-paramiko python-netaddr python-glanceclient
-     python-keystoneclient python-novaclient python-neutronclient
-     python-testresources python-keyring python-testrepository python-oslo.config)
-
-  packages.each do |p|
-    package p
-  end
-end
-
 begin
   provisioner = search(:node, "roles:provisioner-server").first
   proxy_addr = provisioner[:fqdn]
@@ -106,14 +94,11 @@ if node[:tempest][:use_virtualenv]
   end
   execute "virtualenv /opt/tempest/.venv" unless File.exist?("/opt/tempest/.venv")
   pip_cmd = ". /opt/tempest/.venv/bin/activate && #{pip_cmd}"
-  nosetests = "/opt/tempest/.venv/bin/python #{nosetests}"
 end
 
-if node[:tempest][:use_pfs]
-  execute "pip_install_reqs_for_tempest" do
-    cwd "/opt/tempest/"
-    command "#{pip_cmd} -r /opt/tempest/requirements.txt"
-  end
+execute "pip_install_reqs_for_tempest" do
+  cwd "/opt/tempest/"
+  command "#{pip_cmd} -r /opt/tempest/requirements.txt"
 end
 
 if nova[:nova][:use_gitrepo]!=true
