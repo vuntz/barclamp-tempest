@@ -52,6 +52,7 @@ img_user = comp_admin_user
 img_pass = comp_admin_pass
 img_tenant = comp_admin_tenant
 
+tempest_node = node
 tempest_comp_user = node[:tempest][:tempest_user_username]
 tempest_comp_pass = node[:tempest][:tempest_user_password]
 tempest_comp_tenant = node[:tempest][:tempest_user_tenant]
@@ -262,7 +263,8 @@ template "#{node[:tempest][:tempest_path]}/etc/tempest.conf" do
     :nova_host => nova.name,
     :cirros_version => cirros_version,
     :ext_net_id => ext_net_id,
-    :ext_rtr_id => ext_rtr_id
+    :ext_rtr_id => ext_rtr_id,
+    :tempest_node => tempest_node
   )
 end
 

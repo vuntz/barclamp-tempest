@@ -651,43 +651,44 @@ ssh_user = cirros
 
 # Whether or not cinder is expected to be available (boolean
 # value)
-cinder = true
+cinder = <%= @tempest_node[:tempest][:run_cinder_tests] %>
 
 # Whether or not neutron is expected to be available (boolean
 # value)
-neutron = true
+neutron = <%= @tempest_node[:tempest][:run_neutron_tests] %>
 
 # Whether or not glance is expected to be available (boolean
 # value)
-glance = true
+glance = <%= @tempest_node[:tempest][:run_glance_tests] %>
 
 # Whether or not swift is expected to be available (boolean
 # value)
-swift = false
+swift = <%= @tempest_node[:tempest][:run_swift_tests] %>
 
 # Whether or not nova is expected to be available (boolean
 # value)
-nova = true
+nova = <%= @tempest_node[:tempest][:run_nova_tests] %>
 
 # Whether or not Heat is expected to be available (boolean
 # value)
-heat = false
+heat = <%= @tempest_node[:tempest][:run_heat_tests] %>
 
 # Whether or not Ceilometer is expected to be available
 # (boolean value)
-ceilometer = false
+ceilometer = <%= @tempest_node[:tempest][:run_ceilometer_tests] %>
 
 # Whether or not Horizon is expected to be available (boolean
 # value)
-horizon = true
+horizon = <%= @tempest_node[:tempest][:run_horizon_tests] %>
 
 # Whether or not Savanna is expected to be available (boolean
 # value)
-#savanna=false
+savanna = <%= @tempest_node[:tempest][:run_savanna_tests] %>
 
 # Whether or not Ironic is expected to be available (boolean
 # value)
-#ironic=false
+ironic = <%= @tempest_node[:tempest][:run_ironic_tests] %>
+
 
 
 [stress]

@@ -21,6 +21,37 @@
     %p
       %label{ :for => :tempest_adm_password }= t('.tempest_adm_password')
       %input#tempest_adm_password{:type => "password", :name => "tempest_adm_password", :'data-default' => @proposal.raw_data['attributes'][@proposal.barclamp]["tempest_adm_password"], :onchange => "update_value('tempest_adm_password','tempest_adm_password', 'string')"}
+    %p
+      %label{ :for => :run_cinder_tests }= t('.run_cinder_tests')
+      = select_tag :run_cinder_tests, options_for_select([['true','true'], ['false', 'false']], @proposal.raw_data['attributes'][@proposal.barclamp]["run_cinder_tests"].to_s), :onchange => "update_value('run_cinder_tests','run_cinder_tests', 'boolean')"
+    %p
+      %label{ :for => :run_neutron_tests }= t('.run_neutron_tests')
+      = select_tag :run_neutron_tests, options_for_select([['true','true'], ['false', 'false']], @proposal.raw_data['attributes'][@proposal.barclamp]["run_neutron_tests"].to_s), :onchange => "update_value('run_neutron_tests','run_neutron_tests', 'boolean')"
+    %p
+      %label{ :for => :run_glance_tests }= t('.run_glance_tests')
+      = select_tag :run_glance_tests, options_for_select([['true','true'], ['false', 'false']], @proposal.raw_data['attributes'][@proposal.barclamp]["run_glance_tests"].to_s), :onchange => "update_value('run_glance_tests','run_glance_tests', 'boolean')"
+    %p
+      %label{ :for => :run_swift_tests }= t('.run_swift_tests')
+      = select_tag :run_swift_tests, options_for_select([['true','true'], ['false', 'false']], @proposal.raw_data['attributes'][@proposal.barclamp]["run_swift_tests"].to_s), :onchange => "update_value('run_swift_tests','run_swift_tests', 'boolean')"
+    %p
+      %label{ :for => :run_nova_tests }= t('.run_nova_tests')
+      = select_tag :run_nova_tests, options_for_select([['true','true'], ['false', 'false']], @proposal.raw_data['attributes'][@proposal.barclamp]["run_nova_tests"].to_s), :onchange => "update_value('run_nova_tests','run_nova_tests', 'boolean')"
+    %p
+      %label{ :for => :run_heat_tests }= t('.run_heat_tests')
+      = select_tag :run_heat_tests, options_for_select([['true','true'], ['false', 'false']], @proposal.raw_data['attributes'][@proposal.barclamp]["run_heat_tests"].to_s), :onchange => "update_value('run_heat_tests','run_heat_tests', 'boolean')"
+    %p
+      %label{ :for => :run_ceilometer_tests }= t('.run_ceilometer_tests')
+      = select_tag :run_ceilometer_tests, options_for_select([['true','true'], ['false', 'false']], @proposal.raw_data['attributes'][@proposal.barclamp]["run_ceilometer_tests"].to_s), :onchange => "update_value('run_ceilometer_tests','run_ceilometer_tests', 'boolean')"
+    %p
+      %label{ :for => :run_horizon_tests }= t('.run_horizon_tests')
+      = select_tag :run_horizon_tests, options_for_select([['true','true'], ['false', 'false']], @proposal.raw_data['attributes'][@proposal.barclamp]["run_horizon_tests"].to_s), :onchange => "update_value('run_horizon_tests','run_horizon_tests', 'boolean')"
+    %p
+      %label{ :for => :run_savanna_tests }= t('.run_savanna_tests')
+      = select_tag :run_savanna_tests, options_for_select([['true','true'], ['false', 'false']], @proposal.raw_data['attributes'][@proposal.barclamp]["run_savanna_tests"].to_s), :onchange => "update_value('run_savanna_tests','run_savanna_tests', 'boolean')"
+    %p
+      %label{ :for => :run_ironic_tests }= t('.run_ironic_tests')
+      = select_tag :run_ironic_tests, options_for_select([['true','true'], ['false', 'false']], @proposal.raw_data['attributes'][@proposal.barclamp]["run_ironic_tests"].to_s), :onchange => "update_value('run_ironic_tests','run_ironic_tests', 'boolean')"
+
     %label.section-header{ :for => :cpfs_div }= t('.pull_from_source')
     %div.section{ :id => :pfs_div } 
       %p

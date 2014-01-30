@@ -22,7 +22,18 @@
             "tempest_test_image": { "type": "str", "required": true },
             "use_virtualenv": { "type": "bool", "required": true },
             "use_pfs": { "type": "bool", "required": true },
-            "tempest_path" : {"type": "str", "required": true }
+            "tempest_path" : {"type": "str", "required": true },
+	    "test_suites" : {"type": "seq", "sequence": [ { "type": "str" } ], "required": true  },
+            "run_cinder_tests" : { "type": "bool", "required": true },
+            "run_neutron_tests" : { "type": "bool", "required": true },
+            "run_glance_tests" : { "type": "bool", "required": true },
+            "run_swift_tests" : { "type": "bool", "required": true },
+            "run_nova_tests" : { "type": "bool", "required": true },
+            "run_heat_tests" : { "type": "bool", "required": true },
+            "run_ceilometer_tests" : { "type": "bool", "required": true },
+            "run_horizon_tests" : { "type": "bool", "required": true },
+            "run_savanna_tests" : { "type": "bool", "required": true },
+            "run_ironic_tests" : { "type": "bool", "required": true }
           }
         }
       }
