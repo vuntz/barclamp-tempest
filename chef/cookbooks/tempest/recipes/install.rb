@@ -60,9 +60,12 @@ remote_file tarball_url do
   action :create_if_missing
 end
 
-#needed to create venv correctly
 
-package("libxslt1-dev")
+# Dealing with platform dependent package names
+
+node[:tempest][:platform][:packages].each do |p|
+   package p
+end
 
 #needed for tempest.tests.test_wrappers.TestWrappers.test_pretty_tox
 package("git")
@@ -74,8 +77,6 @@ bash "install_tempest_from_archive" do
   code "tar xf #{filename} && mv openstack-tempest-* tempest && mv tempest /opt/ && rm #{filename}"
   not_if { ::File.exists?(tempest_path) }
 end
-
-package("libxslt1-dev")
 
 if node[:tempest][:use_virtualenv]
   package("python-virtualenv")
