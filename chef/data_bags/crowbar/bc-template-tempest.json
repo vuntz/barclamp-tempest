@@ -3,6 +3,7 @@
   "description": "provides a tempest installation",
   "attributes": {
     "tempest": {
+      "private_network_name": "fixed",
       "test_suites": [ "cinder", "neutron", "glance", "swift", "nova", "heat", "ceilometer", "horizon", "savanna", "ironic" ],
       "tempest_tarball": "http://<ADMINWEB>/files/tempest/havana.tar.gz",
       "tempest_test_image": "http://<ADMINWEB>/files/tempest/cirros-0.3.0-x86_64-uec.tar.gz",

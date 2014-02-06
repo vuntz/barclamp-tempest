@@ -242,7 +242,7 @@ ping_timeout = 120
 #ssh_channel_timeout=60
 
 # Visible fixed network name  (string value)
-#fixed_network_name=private
+fixed_network_name = <%= @private_network_name %>
 
 # Network used for SSH connections. (string value)
 #network_for_ssh=public
@@ -703,13 +703,13 @@ nova_logdir = /var/log/nova
 
 # Maximum number of instances to create during test. (integer
 # value)
-#max_instances=16
+max_instances = 5
 
 # Controller host. (string value)
-#controller=<None>
+controller = <%= @nova_host %>
 
 # Controller host. (string value)
-#target_controller=<None>
+target_controller = <%= @nova_host %>
 
 # ssh user. (string value)
 #target_ssh_user=<None>

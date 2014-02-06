@@ -1,5 +1,5 @@
 default[:tempest][:use_virtualenv] = false
-
+default[:tempest][:private_network_name] = "fixed"
 #
 # Dealing with platform dependent package names
 #
