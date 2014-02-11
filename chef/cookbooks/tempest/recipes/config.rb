@@ -156,10 +156,12 @@ machine_id_file = node[:tempest][:tempest_path] + '/machine.id'
 venv_prefix_path = node[:tempest][:use_virtualenv] ? ". /opt/tempest/.venv/bin/activate && " : nil
 ENV['PATH'] = ENV['PATH'] + ":/opt/tempest/.venv/bin" if node[:tempest][:use_virtualenv]
 
+provisioner = search(:node, "roles:provisioner-server").first
+extra_image_url = "http://#{provisioner[:fqdn]}:#{provisioner[:provisioner][:web_port]}/files/ami/cirros-0.3.0-x86_64-uec.tar.gz" || node[:tempest][:extra_image_url]
 
 bash "upload tempest test image" do
   code <<-EOH
-IMAGE_URL=${IMAGE_URL:-"http://launchpad.net/cirros/trunk/0.3.0/+download/cirros-0.3.0-x86_64-uec.tar.gz"}
+IMAGE_URL=${IMAGE_URL:-"#{extra_image_url}"}
 
 OS_USER=${OS_USER:-admin}
 OS_TENANT=${OS_TENANT:-admin}
@@ -266,7 +268,8 @@ template "#{node[:tempest][:tempest_path]}/etc/tempest.conf" do
     :ext_net_id => ext_net_id,
     :ext_rtr_id => ext_rtr_id,
     :tempest_node => tempest_node,
-    :private_network_name => private_network_name
+    :private_network_name => private_network_name,
+    :extra_image_url => extra_image_url
   )
 end
 

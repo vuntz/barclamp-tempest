@@ -199,4 +199,5 @@ pips:
 
 extra_files:
   - http://launchpad.net/cirros/trunk/0.3.0/+download/cirros-0.3.0-x86_64-uec.tar.gz tempest
+  - http://launchpad.net/cirros/trunk/0.3.0/+download/cirros-0.3.0-x86_64-uec.tar.gz ami
   - https://github.com/openstack/tempest/tarball/stable/havana.tar.gz tempest
