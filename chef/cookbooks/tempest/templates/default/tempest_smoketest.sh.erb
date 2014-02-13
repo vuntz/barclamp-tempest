@@ -16,20 +16,34 @@ admin_password=<%= @comp_admin_pass %>
 admin_tenant_name=<%= @comp_admin_tenant %>
 
 #s3 test preparation
-cert_dir=<%= @tempest_path %>/etc/certs
+cert_dir=<%= @euca_key_dir %>
 mkdir -p ${cert_dir}
 
+export EC2_PRIVATE_KEY=<%= @ec2_private_key %>
+export EC2_CERT=<%= @ec2_cert %>
+export EUCALYPTUS_CERT=<%= @ec2_eucalyptus_cert %>
 export OS_USERNAME=${username}
 export OS_PASSWORD=${password}
 export OS_TENANT_NAME=${tenant_name}
 export EC2_USER_ID=${username}
-export EUCALYPTUS_CERT="${cert_dir}/cacert.pem"
-export EC2_CERT="${cert_dir}/cert.pem"
-export EC2_PRIVATE_KEY="${cert_dir}/pk.pem"
+
+die() {
+    res=$1
+    shift
+    echo -e "\n$@\n"
+    exit $res
+}
 
 admin_user_id=$(keystone --os-username ${admin_username} --os-password ${admin_password} --os-tenant-name ${admin_tenant_name} user-list | grep "${admin_username}" | awk {'print $2'})
 admin_role_id=$(keystone --os-username ${admin_username} --os-password ${admin_password} --os-tenant-name ${admin_tenant_name} role-list | grep "${admin_username}" | awk {'print $2'})
 tempest_tenant_id=$(keystone --os-username ${admin_username} --os-password ${admin_password} --os-tenant-name ${admin_tenant_name} tenant-list | grep "${tenant_name}" | awk {'print $2'})
+
+[[ $tempest_tenant_id  ]] || die 1 "ERROR: No tempest tenant found, aborting tempest run"
+
+tempest_user_id=$(keystone --os-username ${admin_username} --os-password ${admin_password} --os-tenant-name ${admin_tenant_name} user-list | grep "${username}" | awk {'print $2'})
+authorized_for=$(keystone  --os-username ${admin_username} --os-password ${admin_password} --os-tenant-name ${admin_tenant_name} user-role-list --user-id $tempest_user_id --tenant-id $tempest_tenant_id | grep $tempest_tenant_id | awk {'print $8'})
+
+[[ $authorized_for = $tempest_tenant_id  ]] || die 1 "ERROR: [ $username : $tempest_user_id ] is not authorized for [ $tenant_name : $tempest_tenant_id ]"
 
 (
 if [[ "$(keystone --os-username ${admin_username} --os-password ${admin_password} --os-tenant-name ${admin_tenant_name} user-role-list --user-id ${admin_user_id} --tenant-id ${tempest_tenant_id} | grep "${admin_username}" | awk {'print $2'})" == "${admin_role_id}" ]]; then
@@ -61,7 +75,7 @@ export OS_USERNAME=${admin_username}
 export OS_PASSWORD=${admin_password}
 export OS_TENANT_NAME=${admin_tenant_name}
 echo -e "Cleaning up tenants, excluding tempest-service tenant ${tempest_tenant_id}"
-for f in `keystone tenant-list | grep -E 'test_tenant_|tenant2-[0-9]*|tenant-new[0-9]*|tenant-[0-9]+|tenant-dup-[0-9]+' | grep -v "{$tempest_tenant_id}"  | awk '{print $2}'` ; do keystone tenant-delete $f ; done
+for f in `keystone tenant-list | grep -v ${tempest_tenant_id}  | grep -E 'test_tenant_|tenant2-[0-9]*|tenant-new[0-9]*|tenant-[0-9]+|tenant-dup-[0-9]+' | awk '{print $2}'` ; do  echo -e "Deleting tenant: $f" ; keystone tenant-delete $f ; done
 echo -e "Cleaning up users..."
 for f in `keystone user-list | grep -E 'test_user_[0-9]+' | awk '{print $2}'` ; do keystone user-delete $f ; done
 echo -e "Cleaning up roles..."
@@ -89,6 +103,48 @@ echo -e "Cleaning up flavors..."
 for f in `nova flavor-list | grep -E 'test_flavor_[0-9]+' | awk '{print $2}'` ; do nova flavor-delete $f ; done
 echo -e "Cleaning up instances..."
 for f in `nova list | awk '{print $2}' | grep -v '^ID$' | grep -v '^$'` ; do nova delete $f ; done
+
+declare -a routers ports nets images
+for n in `neutron net-list | grep 'test-network-[0-9].*$' | awk {'print $2'}`; do echo "Junk network found: $n" && nets=("${nets[@]}" "$n"); done || echo -e "No junk routers found"
+for r in `neutron router-list | grep 'router-[0-9].*$' | awk {'print $2'}`; do echo "Junk router found: $r" && routers=("${routers[@]}" "$r"); done || echo -e "No junk routers found"
+for i in `glance image-list | grep 'aki-name-[0-9].*\|ari-name-[0-9].*\|ami-name-[0-9].*' | awk {'print $2'}`; do echo "Junk image found: $i" && images=("${images[@]}" "$i"); done || echo -e "No junk images found"
+
+if [[ $routers ]]; then
+	for r in "${routers[@]}"; do
+                for x in `neutron router-port-list $r | grep 'subnet_id.*' | awk {'print $8'} | sed 's/,//g' | sed 's/\"//g'`; do echo "Junk port found: $x" && ports=("${ports[@]}" "$x"); done || echo -e "No junk ports found"
+                if [[ $ports ]]; then
+                        for p in "${ports[@]}"; do
+                                echo -e "Deleting port $p for router $r"
+                                neutron router-interface-delete $r $p  || continue
+                        done
+                else
+                        echo -e "No junk ports found, deleting router"
+                        neutron router-delete $r
+
+                fi
+        done
+else
+        echo -e "No junk routers found"
+fi
+
+if [[ $nets ]]; then
+        for n in "${nets[@]}"; do
+                echo -e "Deleting network $n"
+                neutron net-delete $n
+        done
+else
+        echo -e "No junk networks found"
+fi
+
+if [[ $images ]]; then
+        for i in "${images[@]}"; do
+                echo -e "Deleting glance image $i"
+                glance image-delete $i
+        done
+else
+        echo -e "No junk glance images found"
+fi
+
 echo -e "Cleaning up floating ips..."
 for f in `neutron floatingip-list | awk {'print $2'}`; do neutron floatingip-delete $f ; done
 )  1>&2

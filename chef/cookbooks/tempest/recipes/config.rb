@@ -229,13 +229,25 @@ bash "create_yet_another_tiny_flavor" do
 EOH
 end
 
-ec2_access = `keystone --os_username #{tempest_comp_user} --os_password #{tempest_comp_pass} --os_tenant_name #{tempest_comp_tenant} --os_auth_url http://#{keystone_address}:5000/v2.0 ec2-credentials-list | grep -v '\\-\\{5\\}' | tail -n 1 | tr -d '|' | awk '{print $2}'`
-ec2_secret = `keystone --os_username #{tempest_comp_user} --os_password #{tempest_comp_pass} --os_tenant_name #{tempest_comp_tenant} --os_auth_url http://#{keystone_address}:5000/v2.0 ec2-credentials-list | grep -v '\\-\\{5\\}' | tail -n 1 | tr -d '|' | awk '{print $3}'`
+# EC2 environment configuration start
+node[:tempest][:ec2_access] = `keystone --os_username #{tempest_comp_user} --os_password #{tempest_comp_pass} --os_tenant_name #{tempest_comp_tenant} --os_auth_url http://#{keystone_address}:5000/v2.0 ec2-credentials-list | grep -v '\\-\\{5\\}' | tail -n 1 | tr -d '|' | awk '{print $2}'`
+node[:tempest][:ec2_secret] = `keystone --os_username #{tempest_comp_user} --os_password #{tempest_comp_pass} --os_tenant_name #{tempest_comp_tenant} --os_auth_url http://#{keystone_address}:5000/v2.0 ec2-credentials-list | grep -v '\\-\\{5\\}' | tail -n 1 | tr -d '|' | awk '{print $3}'`
+euca_key_dir = node[:tempest][:tempest_path] ? "#{node[:tempest][:tempest_path]}/etc/certs" : "/opt/tempest/etc/certs"
+ec2_eucalyptus_cert = "#{euca_key_dir}/cacert.pem"
+ec2_cert = "#{euca_key_dir}/cert.pem"
+ec2_private_key = "#{euca_key_dir}/pk.pem"
+ec2_url = "http://#{nova.name}:8773/services/Cloud"
+s3_url = "http://#{nova.name}:3333/"
 cirros_version = "0.3.0"
+# EC2 environment configuration end
 
 cli_dir = nova[:nova][:use_gitrepo] ? '/usr/local/bin' : '/usr/bin'
 ext_net_id = `neutron --os_username #{tempest_adm_user} --os_password #{tempest_adm_pass} --os_tenant_name #{tempest_comp_tenant} --os_auth_url http://#{keystone_address}:5000/v2.0 net-list | grep floating | awk {'print $2'}`.strip
 ext_rtr_id = `neutron --os_username #{tempest_adm_user} --os_password #{tempest_adm_pass} --os_tenant_name #{tempest_comp_tenant} --os_auth_url http://#{keystone_address}:5000/v2.0 router-list | grep floating | awk {'print $2'}`.strip
+
+
+
+
 template "#{node[:tempest][:tempest_path]}/etc/tempest.conf" do
   source "tempest.conf.erb"
   mode 0644
@@ -260,9 +272,11 @@ template "#{node[:tempest][:tempest_path]}/etc/tempest.conf" do
     :comp_admin_pass => comp_admin_pass,
     :comp_admin_tenant => comp_admin_tenant,
     :cli_dir => cli_dir,
-    :ec2_access => ec2_access,
-    :ec2_secret => ec2_secret,
     :tempest_path => node[:tempest][:tempest_path],
+    :ec2_access => node[:tempest][:ec2_access],
+    :ec2_secret => node[:tempest][:ec2_secret],
+    :ec2_url => ec2_url,
+    :s3_url => s3_url,
     :nova_host => nova.name,
     :cirros_version => cirros_version,
     :ext_net_id => ext_net_id,
@@ -273,12 +287,28 @@ template "#{node[:tempest][:tempest_path]}/etc/tempest.conf" do
   )
 end
 
+template "/root/.eucarc" do
+  source "eucarc.erb"
+  mode 0600
+  owner "root"
+  group "root"
+  variables(
+    :ec2_eucalyptus_cert => ec2_eucalyptus_cert,
+    :ec2_cert => ec2_cert,
+    :ec2_private_key => ec2_private_key,
+    :ec2_url => ec2_url,
+    :s3_url => s3_url,
+    :ec2_access => node[:tempest][:ec2_access],
+    :ec2_secret => node[:tempest][:ec2_secret]
+    )
+end
+
 nosetests = `PATH=#{ENV['PATH']} && which nosetests`.strip
 
 if node[:tempest][:use_virtualenv]
   nosetests = "/opt/tempest/.venv/bin/python #{nosetests}"
 end
-  
+
 template "/tmp/tempest_smoketest.sh" do
   mode 0755
   source "tempest_smoketest.sh.erb"
@@ -295,7 +325,15 @@ template "/tmp/tempest_smoketest.sh" do
     :comp_admin_user => comp_admin_user,
     :comp_admin_pass => comp_admin_pass,
     :comp_admin_tenant => comp_admin_tenant,
-    :tempest_path => node[:tempest][:tempest_path]
+    :tempest_path => node[:tempest][:tempest_path],
+    :euca_key_dir => euca_key_dir,
+    :ec2_eucalyptus_cert => ec2_eucalyptus_cert,
+    :ec2_cert => ec2_cert,
+    :ec2_private_key => ec2_private_key,
+    :ec2_url => ec2_url,
+    :s3_url => s3_url,
+    :ec2_access => node[:tempest][:ec2_access],
+    :ec2_secret => node[:tempest][:ec2_secret]
   )
 end
 

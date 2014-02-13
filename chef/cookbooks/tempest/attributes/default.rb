@@ -1,6 +1,7 @@
 default[:tempest][:use_virtualenv] = false
 default[:tempest][:private_network_name] = "fixed"
-
+default[:tempest][:ec2_access] = ""
+default[:tempest][:ec2_secret] = ""
 #
 # Extra files used in tempest tests
 #
