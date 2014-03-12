@@ -14,10 +14,10 @@ default[:tempest][:extra_image_url] = "http://download.cirros-cloud.net/0.3.0/ci
 case node["platform"]
     when "ubuntu"
         default[:tempest][:platform] = {
-            :packages => ["libxslt1-dev"]
+            :packages => ["libxslt1-dev","libffi-dev"]
         }
     when "centos"
          default[:tempest][:platform] = {
-            :packages => ["libxslt-devel"]
+            :packages => ["libxslt-devel","libffi-devel"]
         }
 end

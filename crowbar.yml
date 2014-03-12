@@ -141,6 +141,7 @@ debs:
       - libxslt1-dev
       - euca2ools
       - git
+      - libffi-dev
 
 rpms:
   centos-6.4:
@@ -169,7 +170,7 @@ rpms:
     - libxslt-devel
     - git
     - euca2ools
-
+    - libffi-devel
 pips:
   - pbr>=0.5.21,<1.0
   - anyjson>=0.3.3

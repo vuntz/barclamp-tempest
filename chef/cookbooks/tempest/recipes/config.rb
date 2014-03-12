@@ -302,17 +302,19 @@ template "/root/.eucarc" do
     :ec2_secret => node[:tempest][:ec2_secret]
     )
 end
-
+activate_venv = nil
 nosetests = `PATH=#{ENV['PATH']} && which nosetests`.strip
 
 if node[:tempest][:use_virtualenv]
-  nosetests = "/opt/tempest/.venv/bin/python #{nosetests}"
+  nosetests = 'nosetests'
+  activate_venv = true
 end
 
 template "/tmp/tempest_smoketest.sh" do
   mode 0755
   source "tempest_smoketest.sh.erb"
   variables(
+    :activate_venv => activate_venv,
     :nosetests => nosetests,
     :key_host => keystone_address,
     :key_port => keystone_port,
