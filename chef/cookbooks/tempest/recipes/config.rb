@@ -245,7 +245,11 @@ cli_dir = nova[:nova][:use_gitrepo] ? '/usr/local/bin' : '/usr/bin'
 ext_net_id = `neutron --os_username #{tempest_adm_user} --os_password #{tempest_adm_pass} --os_tenant_name #{tempest_comp_tenant} --os_auth_url http://#{keystone_address}:5000/v2.0 net-list | grep floating | awk {'print $2'}`.strip
 ext_rtr_id = `neutron --os_username #{tempest_adm_user} --os_password #{tempest_adm_pass} --os_tenant_name #{tempest_comp_tenant} --os_auth_url http://#{keystone_address}:5000/v2.0 router-list | grep floating | awk {'print $2'}`.strip
 
-
+# Swift features controll start
+set_tempurl = false
+sp = search(:node, "roles:swift-proxy").first
+set_tempurl = sp[:swift][:middlewares][:tempurl][:enabled] if sp
+# Swift features contoll end
 
 
 template "#{node[:tempest][:tempest_path]}/etc/tempest.conf" do
@@ -283,7 +287,8 @@ template "#{node[:tempest][:tempest_path]}/etc/tempest.conf" do
     :ext_rtr_id => ext_rtr_id,
     :tempest_node => tempest_node,
     :private_network_name => private_network_name,
-    :extra_image_url => extra_image_url
+    :extra_image_url => extra_image_url,
+    :set_tempurl => set_tempurl
   )
 end
 
