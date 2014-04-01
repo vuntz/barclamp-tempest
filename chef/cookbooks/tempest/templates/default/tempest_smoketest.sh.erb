@@ -19,6 +19,9 @@ admin_tenant_name=<%= @comp_admin_tenant %>
 cert_dir=<%= @euca_key_dir %>
 mkdir -p ${cert_dir}
 
+<% if @python26_mode_on -%>
+export TEMPEST_PY26_NOSE_COMPAT=1
+<% end -%>
 export EC2_PRIVATE_KEY=<%= @ec2_private_key %>
 export EC2_CERT=<%= @ec2_cert %>
 export EUCALYPTUS_CERT=<%= @ec2_eucalyptus_cert %>

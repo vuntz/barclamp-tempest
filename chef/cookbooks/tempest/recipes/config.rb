@@ -308,7 +308,13 @@ template "/root/.eucarc" do
     )
 end
 activate_venv = nil
+python26_mode_on = nil
+
 nosetests = `PATH=#{ENV['PATH']} && which nosetests`.strip
+p_version=`python  --version 2>&1`
+if ( p_version =~ /2.6(.*)/ )
+  python26_mode_on = true
+end
 
 if node[:tempest][:use_virtualenv]
   nosetests = 'nosetests'
@@ -319,6 +325,7 @@ template "/tmp/tempest_smoketest.sh" do
   mode 0755
   source "tempest_smoketest.sh.erb"
   variables(
+    :python26_mode_on => python26_mode_on,
     :activate_venv => activate_venv,
     :nosetests => nosetests,
     :key_host => keystone_address,
