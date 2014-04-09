@@ -347,7 +347,8 @@ template "/tmp/tempest_smoketest.sh" do
     :ec2_url => ec2_url,
     :s3_url => s3_url,
     :ec2_access => node[:tempest][:ec2_access],
-    :ec2_secret => node[:tempest][:ec2_secret]
+    :ec2_secret => node[:tempest][:ec2_secret],
+    :xunit_file => node[:tempest][:xunit_file]
   )
 end
 

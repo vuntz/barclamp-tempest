@@ -23,6 +23,7 @@
             "use_virtualenv": { "type": "bool", "required": true },
             "use_pfs": { "type": "bool", "required": true },
             "tempest_path" : {"type": "str", "required": true },
+	    "xunit_file" : {"type": "str", "required": true },
             "private_network_name" : {"type": "str", "required": true },
 	    "test_suites" : {"type": "seq", "sequence": [ { "type": "str" } ], "required": true  },
             "run_cinder_tests" : { "type": "bool", "required": true },

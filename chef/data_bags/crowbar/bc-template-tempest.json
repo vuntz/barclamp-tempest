@@ -16,6 +16,7 @@
       "use_pfs": false,
       "nova_instance": "none",
       "tempest_path": "/opt/tempest",
+      "xunit_file": "/var/log/tempest.xml",
       "run_cinder_tests": true,
       "run_neutron_tests": true,
       "run_glance_tests": true,

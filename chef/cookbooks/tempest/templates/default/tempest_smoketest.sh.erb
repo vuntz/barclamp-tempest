@@ -71,7 +71,7 @@ euca-bundle-image -i ${s3_materials_path}/cirros-*-vmlinuz --kernel true -d ${s3
 <% if @activate_venv -%>
 . <%= @tempest_path %>/.venv/bin/activate
 <% end -%>
-<%= @nosetests %> -q --with-xunit --xunit-file=/dev/stdout -w /opt/tempest/ -v tempest
+<%= @nosetests %> -q --with-xunit --xunit-file=<%= @xunit_file %> -w /opt/tempest/ -v tempest
 tresult=$?
 
 ### clean up in admin tenant
