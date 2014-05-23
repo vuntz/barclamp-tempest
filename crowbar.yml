@@ -101,6 +101,17 @@ locale_additions:
           tempest_adm_username: Choose Tempest admin username
           tempest_adm_password: Choose Tempest admin password
           tempest_user_tenant: Choose tenant
+          run_cinder_tests: Run Cinder related tests
+          run_neutron_tests: Run Neutron related tests
+          run_glance_tests: Run Glance related tests
+          run_swift_tests: Run Swift related tests
+          run_nova_tests: Run Nova related tests
+          run_heat_tests: Run Heat related tests
+          run_ceilometer_tests: Run Ceilometer related tests
+          run_horizon_tests: Run Horizon related tests
+          run_savanna_tests: Run Savanna related tests
+          run_ironic_tests: Run Ironic related tests
+
         edit_deployment:
           deployment: Deployment
 
@@ -127,6 +138,10 @@ debs:
       - python-keyring
       - python-testrepository
       - python-oslo.config
+      - libxslt1-dev
+      - euca2ools
+      - git
+      - libffi-dev
 
 rpms:
   centos-6.4:
@@ -152,11 +167,14 @@ rpms:
     - python-keyring
     - python-testrepository
     - python-oslo.config
-
+    - libxslt-devel
+    - git
+    - euca2ools
+    - libffi-devel
 pips:
   - pbr>=0.5.21,<1.0
   - anyjson>=0.3.3
-  - nose
+  - nose==1.1.2
   - httplib2
   - jsonschema>=1.3.0,!=1.4.0
   - testtools>=0.9.32
@@ -170,15 +188,21 @@ pips:
   - python-neutronclient>=2.2.3,<3
   - python-cinderclient>=1.0.4
   - python-heatclient>=0.2.3
+  - python-swiftclient>1.5,<2
   - testresources>=0.2.4
-  - keyring>=1.6.1
+  - keyring>=1.6.1,<2.0
   - testrepository>=0.0.17
   - oslo.config>=1.2.0
   - eventlet>=0.13.0
-  - six<1.4.0
+  - six>=1.4.1
   - iso8601>=0.1.4
   - fixtures>=0.3.14
+  - argparse
 
 extra_files:
   - http://launchpad.net/cirros/trunk/0.3.0/+download/cirros-0.3.0-x86_64-uec.tar.gz tempest
+  - http://launchpad.net/cirros/trunk/0.3.0/+download/cirros-0.3.0-x86_64-uec.tar.gz ami
   - https://github.com/openstack/tempest/tarball/stable/havana.tar.gz tempest
+
+git_repo:
+  - tempest https://github.com/openstack/tempest.git stable/havana

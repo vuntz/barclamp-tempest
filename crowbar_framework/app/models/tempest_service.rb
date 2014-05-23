@@ -37,6 +37,9 @@ class TempestService < ServiceObject
     @logger.debug("Tempest create_proposal: leaving base part")
 
     nodes = NodeObject.find("roles:nova-multi-controller")
+    base["attributes"]["tempest"]["test_suites"].each do |s|
+       base["attributes"]["tempest"]["run_#{s}_tests"] = true if NodeObject.find("roles:*#{s}*").any?
+    end
     nodes.delete_if { |n| n.nil? or n.admin? }
     unless nodes.empty?
       base["deployment"]["tempest"]["elements"] = {
@@ -196,7 +199,7 @@ class TempestService < ServiceObject
     @logger.info("starting tempest on node #{node}, test run uuid #{test_run['uuid']}")
 
     pid = fork do
-      command_line = "/tmp/tempest_smoketest.sh 2>/dev/null"
+      command_line = "/tmp/tempest_smoketest.sh /dev/stdout 2>/dev/null"
       Process.waitpid run_remote_chef_client(node, command_line, test_run['results.xml'])
 
       test_run['ended'] = Time.now.utc.to_i

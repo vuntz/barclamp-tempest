@@ -18,7 +18,6 @@
 # limitations under the License.
 #
 
-
 env_filter = " AND nova_config_environment:nova-config-#{node[:tempest][:nova_instance]}"
 
 novas = search(:node, "roles:nova-multi-controller#{env_filter}") || []
@@ -53,6 +52,8 @@ img_user = comp_admin_user
 img_pass = comp_admin_pass
 img_tenant = comp_admin_tenant
 
+tempest_node = node
+private_network_name = node[:tempest][:private_network_name]
 tempest_comp_user = node[:tempest][:tempest_user_username]
 tempest_comp_pass = node[:tempest][:tempest_user_password]
 tempest_comp_tenant = node[:tempest][:tempest_user_tenant]
@@ -85,7 +86,7 @@ keystone_register "tempest tempest wakeup keystone" do
   port keystone_admin_port
   token keystone_token
   action :wakeup
-end
+end.run_action(:wakeup)
 
 keystone_register "create tenant #{tempest_comp_tenant} for tempest" do
   host keystone_address
@@ -93,13 +94,14 @@ keystone_register "create tenant #{tempest_comp_tenant} for tempest" do
   token keystone_token
   tenant_name tempest_comp_tenant
   action :add_tenant
-end
+end.run_action(:add_tenant)
 
 users = [
           {'name' => tempest_comp_user, 'pass' => tempest_comp_pass, 'role' => 'Member'},
           {'name' => tempest_adm_user, 'pass' => tempest_adm_pass, 'role' => 'admin' },
         ]
 users.each do |user|
+
   keystone_register "add #{user["name"]}:#{user["pass"]} user" do
     host keystone_address
     port keystone_admin_port
@@ -108,7 +110,7 @@ users.each do |user|
     user_password user["pass"]
     tenant_name tempest_comp_tenant 
     action :add_user
-  end
+  end.run_action(:add_user)
 
   keystone_register "add #{user["name"]}:#{tempest_comp_tenant} user #{user["role"]} role" do
     host keystone_address
@@ -118,17 +120,48 @@ users.each do |user|
     role_name user["role"]
     tenant_name tempest_comp_tenant 
     action :add_access
-  end
+  end.run_action(:add_access)
+
+  keystone_register "add default tempest_ec2 creds for #{user["name"]}:#{user["role"]} in tenant #{tempest_comp_tenant}" do
+     protocol node[:keystone][:api][:protocol]
+     host keystone_address
+     auth ({
+         :tenant => comp_admin_tenant,
+         :user => comp_admin_user,
+         :password => comp_admin_pass
+     })
+     port keystone_admin_port
+     user_name user["name"]
+     tenant_name tempest_comp_tenant
+     action :add_ec2
+   end.run_action(:add_ec2)
+
+end
+
+directory "#{node[:tempest][:tempest_path]}/etc" do
+  action :create
+end
+
+directory "#{node[:tempest][:tempest_path]}/etc/certs" do
+  action :create
+end
+
+directory "#{node[:tempest][:tempest_path]}/etc/cirros" do
+  action :create
 end
 
 
 machine_id_file = node[:tempest][:tempest_path] + '/machine.id'
 
 venv_prefix_path = node[:tempest][:use_virtualenv] ? ". /opt/tempest/.venv/bin/activate && " : nil
+ENV['PATH'] = ENV['PATH'] + ":/opt/tempest/.venv/bin" if node[:tempest][:use_virtualenv]
+
+provisioner = search(:node, "roles:provisioner-server").first
+extra_image_url = "http://#{provisioner[:fqdn]}:#{provisioner[:provisioner][:web_port]}/files/ami/cirros-0.3.0-x86_64-uec.tar.gz" || node[:tempest][:extra_image_url]
 
 bash "upload tempest test image" do
   code <<-EOH
-IMAGE_URL=${IMAGE_URL:-"http://launchpad.net/cirros/trunk/0.3.0/+download/cirros-0.3.0-x86_64-uec.tar.gz"}
+IMAGE_URL=${IMAGE_URL:-"#{extra_image_url}"}
 
 OS_USER=${OS_USER:-admin}
 OS_TENANT=${OS_TENANT:-admin}
@@ -157,6 +190,8 @@ wget $IMAGE_URL --directory-prefix=$TEMP || exit $?
 echo "Unpacking image ... "
 mkdir $IMG_DIR
 tar -xvzf $TEMP/$IMG_FILE -C $IMG_DIR || exit $?
+rm -rf #{node[:tempest][:tempest_path]}/etc/cirros/*
+cp -v $(findfirst '*-vmlinuz') $(findfirst '*-initrd') $(findfirst '*.img') #{node[:tempest][:tempest_path]}/etc/cirros/
 
 echo -n "Adding kernel ... "
 KERNEL_ID=$(glance_it add --silent-upload name="$IMG_NAME-tempest-kernel" is_public=false container_format=aki disk_format=aki < $(findfirst '*-vmlinuz') | extract_id)
@@ -194,9 +229,28 @@ bash "create_yet_another_tiny_flavor" do
 EOH
 end
 
-directory "#{node[:tempest][:tempest_path]}/etc" do
-  action :create
-end
+# EC2 environment configuration start
+node[:tempest][:ec2_access] = `keystone --os_username #{tempest_comp_user} --os_password #{tempest_comp_pass} --os_tenant_name #{tempest_comp_tenant} --os_auth_url http://#{keystone_address}:5000/v2.0 ec2-credentials-list | grep -v '\\-\\{5\\}' | tail -n 1 | tr -d '|' | awk '{print $2}'`
+node[:tempest][:ec2_secret] = `keystone --os_username #{tempest_comp_user} --os_password #{tempest_comp_pass} --os_tenant_name #{tempest_comp_tenant} --os_auth_url http://#{keystone_address}:5000/v2.0 ec2-credentials-list | grep -v '\\-\\{5\\}' | tail -n 1 | tr -d '|' | awk '{print $3}'`
+euca_key_dir = node[:tempest][:tempest_path] ? "#{node[:tempest][:tempest_path]}/etc/certs" : "/opt/tempest/etc/certs"
+ec2_eucalyptus_cert = "#{euca_key_dir}/cacert.pem"
+ec2_cert = "#{euca_key_dir}/cert.pem"
+ec2_private_key = "#{euca_key_dir}/pk.pem"
+ec2_url = "http://#{nova.name}:8773/services/Cloud"
+s3_url = "http://#{nova.name}:3333/"
+cirros_version = "0.3.0"
+# EC2 environment configuration end
+
+cli_dir = nova[:nova][:use_gitrepo] ? '/usr/local/bin' : '/usr/bin'
+ext_net_id = `neutron --os_username #{tempest_adm_user} --os_password #{tempest_adm_pass} --os_tenant_name #{tempest_comp_tenant} --os_auth_url http://#{keystone_address}:5000/v2.0 net-list | grep floating | awk {'print $2'}`.strip
+ext_rtr_id = `neutron --os_username #{tempest_adm_user} --os_password #{tempest_adm_pass} --os_tenant_name #{tempest_comp_tenant} --os_auth_url http://#{keystone_address}:5000/v2.0 router-list | grep floating | awk {'print $2'}`.strip
+
+# Swift features controll start
+set_tempurl = false
+sp = search(:node, "roles:swift-proxy").first
+set_tempurl = sp[:swift][:middlewares][:tempurl][:enabled] if sp
+# Swift features contoll end
+
 
 template "#{node[:tempest][:tempest_path]}/etc/tempest.conf" do
   source "tempest.conf.erb"
@@ -220,26 +274,59 @@ template "#{node[:tempest][:tempest_path]}/etc/tempest.conf" do
     :img_tenant => tempest_comp_tenant,
     :comp_admin_user => comp_admin_user,
     :comp_admin_pass => comp_admin_pass,
-    :comp_admin_tenant => comp_admin_tenant 
+    :comp_admin_tenant => comp_admin_tenant,
+    :cli_dir => cli_dir,
+    :tempest_path => node[:tempest][:tempest_path],
+    :ec2_access => node[:tempest][:ec2_access],
+    :ec2_secret => node[:tempest][:ec2_secret],
+    :ec2_url => ec2_url,
+    :s3_url => s3_url,
+    :nova_host => nova.name,
+    :cirros_version => cirros_version,
+    :ext_net_id => ext_net_id,
+    :ext_rtr_id => ext_rtr_id,
+    :tempest_node => tempest_node,
+    :private_network_name => private_network_name,
+    :extra_image_url => extra_image_url,
+    :set_tempurl => set_tempurl
   )
 end
 
-unless %w(redhat centos).include?(node.platform)
-  nosetests = `which nosetests`.strip
-else
-  #for centos we have to use nosetests from venv
-  nosetests = "/opt/tempest/.venv/bin/nosetests"
+template "/root/.eucarc" do
+  source "eucarc.erb"
+  mode 0600
+  owner "root"
+  group "root"
+  variables(
+    :ec2_eucalyptus_cert => ec2_eucalyptus_cert,
+    :ec2_cert => ec2_cert,
+    :ec2_private_key => ec2_private_key,
+    :ec2_url => ec2_url,
+    :s3_url => s3_url,
+    :ec2_access => node[:tempest][:ec2_access],
+    :ec2_secret => node[:tempest][:ec2_secret]
+    )
+end
+activate_venv = nil
+python26_mode_on = nil
+
+nosetests = `PATH=#{ENV['PATH']} && which nosetests`.strip
+p_version=`python  --version 2>&1`
+if ( p_version =~ /2.6(.*)/ )
+  python26_mode_on = true
 end
 
 if node[:tempest][:use_virtualenv]
-  nosetests = "/opt/tempest/.venv/bin/python #{nosetests}"
+  nosetests = 'nosetests'
+  activate_venv = true
 end
-
 
 template "/tmp/tempest_smoketest.sh" do
   mode 0755
   source "tempest_smoketest.sh.erb"
   variables(
+    :python26_mode_on => python26_mode_on,
+    :activate_venv => activate_venv,
     :nosetests => nosetests,
     :key_host => keystone_address,
     :key_port => keystone_port,
@@ -251,10 +338,19 @@ template "/tmp/tempest_smoketest.sh" do
     :alt_comp_tenant => alt_comp_tenant,
     :comp_admin_user => comp_admin_user,
     :comp_admin_pass => comp_admin_pass,
-    :comp_admin_tenant => comp_admin_tenant
+    :comp_admin_tenant => comp_admin_tenant,
+    :tempest_path => node[:tempest][:tempest_path],
+    :euca_key_dir => euca_key_dir,
+    :ec2_eucalyptus_cert => ec2_eucalyptus_cert,
+    :ec2_cert => ec2_cert,
+    :ec2_private_key => ec2_private_key,
+    :ec2_url => ec2_url,
+    :s3_url => s3_url,
+    :ec2_access => node[:tempest][:ec2_access],
+    :ec2_secret => node[:tempest][:ec2_secret],
+    :xunit_file => node[:tempest][:xunit_file]
   )
 end
-
 
 cookbook_file "#{node[:tempest][:tempest_path]}/run_tempest.py" do
   source "run_tempest.py"
