@@ -307,8 +307,8 @@ public_network_id = `neutron --os_username #{tempest_comp_user} --os_password #{
 
 
 storage_protocol = "iSCSI"
-cinders[0][:cinder][:volume].each do |volume|
-  if volume[:volume_driver] == "rbd"
+cinders[0][:cinder][:volumes].each do |volume|
+  if volume[:backend_driver] == "rbd"
     storage_protocol = "ceph"
   end
 end
