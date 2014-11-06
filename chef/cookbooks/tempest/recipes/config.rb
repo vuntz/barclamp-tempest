@@ -272,6 +272,9 @@ cinders[0][:cinder][:volumes].each do |volume|
     vendor_name = "NetApp"
     storage_protocol = "nfs" if volume[:netapp][:storage_protocol] == "nfs"
     break
+  elsif volume[:backend_driver] == "nfs"
+    storage_protocol = "nfs"
+    break
   elsif volume[:backend_driver] == "vmware"
     vendor_name = "VMware"
     storage_protocol = "LSI Logic SCSI"
